@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="An interactive visual walkthrough of Paxos consensus." />
+  <title>Paxos — Understandable Consensus</title>
+  <style>
+:root {
+  --paper: #f6f2e9;
+  --paper-deep: #ece5d7;
+  --ink: #20201d;
+  --muted: #6e6a60;
+  --blue: #4a79a7;
+  --blue-deep: #2c547c;
+  --rust: #b86a48;
+  --green: #5d8367;
+  --gold: #c79d4d;
+  --red: #a75151;
+  --line: rgba(32, 32, 29, 0.14);
+  --shadow: 0 25px 70px rgba(40, 36, 29, 0.10);
+  --serif: Georgia, Cambria, "Times New Roman", Times, serif;
+  --sans: "Lucida Grande", "Lucida Sans Unicode", "Trebuchet MS", Verdana, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,.55), transparent 30%),
+    var(--paper);
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1.58;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: .88em;
+  background: rgba(255,255,255,.45);
+  border: 1px solid var(--line);
+  padding: .08em .28em;
+  border-radius: 4px;
+}
+strong { font-weight: 700; }
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 30px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(246,242,233,.88);
+  backdrop-filter: blur(14px);
+}
+.brand { display: flex; gap: 11px; align-items: baseline; }
+.brand a {
+  font-family: var(--sans);
+  font-size: 18px;
+  letter-spacing: .08em;
+  font-weight: 800;
+}
+.brand span { color: var(--muted); font-size: 14px; }
+.topnav { display: flex; gap: 20px; font-family: var(--sans); font-size: 12px; letter-spacing: .02em; }
+.topnav a { color: var(--muted); }
+.topnav a:hover { color: var(--ink); }
+.progress { height: 2px; background: transparent; position: fixed; top: 65px; left: 0; right: 0; z-index: 31; }
+.progress span { display:block; height: 100%; width: 0; background: var(--blue); transition: width .1s linear; }
+
+.section-shell {
+  width: min(1120px, calc(100vw - 56px));
+  margin: 0 auto;
+}
+.hero {
+  min-height: calc(100vh - 66px);
+  display: grid;
+  grid-template-columns: 1.02fr .98fr;
+  align-items: center;
+  gap: 40px;
+  padding: 90px 0 80px;
+}
+.eyebrow { font-family: var(--sans); font-weight: 800; font-size: 11px; letter-spacing: .16em; color: var(--blue-deep); margin: 0 0 16px; }
+.hero h1 { margin: 0; font-family: var(--sans); font-size: clamp(68px, 9vw, 132px); line-height: .86; letter-spacing: -.055em; font-weight: 700; }
+.hero h1 em { font-family: var(--serif); font-weight: 400; letter-spacing: -.045em; }
+.lede { max-width: 590px; font-size: clamp(24px, 3vw, 34px); line-height: 1.26; margin: 32px 0 0; }
+.hero-actions { display:flex; gap: 12px; flex-wrap: wrap; margin-top: 34px; }
+.button {
+  display:inline-flex; align-items:center; justify-content:center; gap: 9px;
+  border: 1px solid var(--ink); border-radius: 999px; padding: 11px 18px;
+  font-family: var(--sans); font-size: 12px; font-weight: 800; letter-spacing: .02em;
+  transition: transform .18s ease, background .18s ease, color .18s ease;
+}
+.button:hover { transform: translateY(-1px); }
+.button-primary { background: var(--ink); color: var(--paper); }
+.button-primary:hover { background: var(--blue-deep); }
+.button-ghost { background: transparent; color: var(--ink); }
+.button-ghost:hover { background: rgba(255,255,255,.35); }
+.compact { padding: 9px 14px; }
+.text-button { border:0; padding:0; background: transparent; font-family:var(--sans); font-size:11px; font-weight:800; color:var(--muted); }
+.text-button:hover { color: var(--ink); }
+
+.hero-diagram { position:relative; min-height: 510px; display:grid; place-items:center; }
+.orbit { position:absolute; width: 390px; height:390px; border:1px dashed rgba(74,121,167,.26); border-radius:50%; }
+.orbit-two { width: 270px; height:270px; border-color: rgba(184,106,72,.24); transform: rotate(21deg); }
+.hero-node { position:absolute; width:88px; height:88px; border-radius:50%; display:grid; place-items:center; font-family:var(--sans); font-size:34px; font-weight:800; border: 2px solid var(--paper); box-shadow: var(--shadow); }
+.hero-node small { display:block; position:absolute; width:110px; text-align:center; top:74px; font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.04em; }
+.hero-proposer { background:var(--rust); color:white; transform:translate(-10px,-118px); }
+.hero-acceptor { background:var(--blue); color:white; }
+.a1 { transform:translate(-165px,55px); }
+.a2 { transform:translate(0,135px); }
+.a3 { transform:translate(165px,55px); }
+.hero-learner { background:var(--green); color:white; transform:translate(10px,-2px); }
+.hero-caption { position:absolute; font-family:var(--sans); font-weight:800; font-size:12px; letter-spacing:.08em; text-transform:uppercase; text-align:center; color:var(--blue-deep); transform:translate(0,-235px); }
+
+.chapter { display:grid; grid-template-columns: 120px 1fr; gap: 40px; padding: 130px 0; border-top:1px solid var(--line); }
+.chapter-marker { font-family:var(--sans); font-size: 11px; font-weight: 800; color:var(--muted); letter-spacing:.14em; padding-top:12px; }
+.chapter-copy { max-width: 760px; }
+.chapter-copy.wide { max-width: 100%; }
+.chapter h2, .references h2, .takeaway h2, .algorithm-section h2 { margin: 0; font-family:var(--sans); font-size: clamp(40px, 6vw, 72px); line-height: .98; letter-spacing: -.045em; }
+.chapter p { max-width: 700px; }
+.note { margin-top: 32px; padding: 19px 20px; border-left: 3px solid var(--gold); background: rgba(255,255,255,.34); font-size: 17px; }
+.note span { display:block; font-family:var(--sans); font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.14em; color:var(--gold); margin-bottom:6px; }
+
+.role-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-top:42px; }
+.role-card { min-height:260px; padding:26px; border:1px solid var(--line); background:rgba(255,255,255,.34); position:relative; overflow:hidden; }
+.role-icon { width:52px; height:52px; display:grid; place-items:center; border-radius:50%; color:#fff; font-family:var(--sans); font-weight:900; }
+.proposer-card .role-icon { background:var(--rust); }
+.acceptor-card .role-icon { background:var(--blue); }
+.learner-card .role-icon { background:var(--green); }
+.role-card h3 { margin:18px 0 7px; font-family:var(--sans); font-size:24px; letter-spacing:-.02em; }
+.role-card p { margin:0 0 18px; font-size:16px; }
+.role-card code { border:0; background:transparent; padding:0; font-size:13px; color:var(--muted); }
+
+.algorithm-section { padding: 120px 0 130px; }
+.algorithm-header { display:flex; align-items:end; justify-content:space-between; gap:20px; margin-bottom:35px; }
+.quorum-chip { border:1px solid var(--line); padding: 10px 14px; min-width: 150px; background:rgba(255,255,255,.35); }
+.quorum-chip span { display:block; font-family:var(--sans); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.14em; }
+.quorum-chip strong { font-family:var(--sans); font-size:18px; }
+.sim-layout { display:grid; grid-template-columns: 300px 1fr; gap: 18px; align-items:stretch; }
+.sim-story { border:1px solid var(--line); background:rgba(255,255,255,.47); padding:28px; min-height:610px; display:flex; flex-direction:column; }
+.story-kicker { font-family:var(--sans); font-size:10px; letter-spacing:.13em; color:var(--blue-deep); font-weight:900; }
+.story-step { font-family:var(--sans); font-size:11px; color:var(--muted); margin:5px 0 20px; }
+.sim-story h3 { font-family:var(--sans); font-size:28px; line-height:1.04; letter-spacing:-.03em; margin:0 0 15px; }
+.sim-story p { margin:0; font-size:17px; }
+.callout { margin-top:22px; padding:15px 15px 16px; background:var(--paper-deep); font-size:14px; line-height:1.45; border-radius:2px; }
+.sim-controls { display:flex; gap:10px; margin-top:auto; padding-top:30px; }
+.sim-story .text-button { margin-top: 18px; align-self:flex-start; }
+
+.sim-stage { position:relative; min-height:610px; background:#efe8dc; border:1px solid var(--line); overflow:hidden; }
+.stage-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 17px; border-bottom:1px solid var(--line); background:rgba(255,255,255,.2); }
+.stage-header > span { font-family:var(--sans); font-size:10px; font-weight:900; letter-spacing:.13em; color:var(--muted); }
+.stage-actions { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
+.scenario-btn { border:1px solid var(--line); background:transparent; color:var(--muted); padding:6px 9px; font-family:var(--sans); font-size:10px; font-weight:800; border-radius:999px; }
+.scenario-btn.active { color:var(--ink); background:rgba(255,255,255,.62); border-color:rgba(32,32,29,.35); }
+.network { position:absolute; inset:64px 0 64px; }
+.network::before { content:""; position:absolute; left:50%; top:18%; bottom:16%; width:1px; background:rgba(32,32,29,.08); transform:rotate(90deg); box-shadow:0 -125px 0 rgba(32,32,29,.04), 0 125px 0 rgba(32,32,29,.04); }
+.node { position:absolute; width:96px; height:96px; border-radius:50%; border:5px solid #efe8dc; display:grid; place-items:center; font-family:var(--sans); font-size:25px; font-weight:900; z-index:3; box-shadow:0 12px 24px rgba(40,36,29,.10); transition: transform .25s ease, opacity .25s ease, filter .25s ease; }
+.node .node-name { position:absolute; top:92px; font-family:var(--sans); font-size:10px; font-weight:900; white-space:nowrap; color:var(--muted); letter-spacing:.04em; }
+.node .badge { position:absolute; bottom:75px; left:50%; transform:translateX(-50%); font-family:var(--sans); font-size:8px; letter-spacing:.08em; background:var(--ink); color:var(--paper); padding:4px 7px; white-space:nowrap; border-radius:999px; opacity:.9; }
+.node.proposer { background:var(--rust); color:#fff; left:50%; top:9%; transform:translateX(-50%); }
+.node.acceptor { background:var(--blue); color:#fff; }
+.node.acceptor.a1 { left:17%; top:57%; transform:translateX(-0%); }
+.node.acceptor.a2 { left:50%; top:68%; transform:translateX(-50%); }
+.node.acceptor.a3 { left:83%; top:57%; transform:translateX(-100%); }
+.node.learner { background:var(--green); color:#fff; left:50%; top:35%; transform:translateX(-50%); width:80px; height:80px; }
+.node.down { opacity:.22; filter:grayscale(1); }
+.node.quorum { outline:3px solid rgba(199,157,77,.72); outline-offset:5px; }
+.node.flash { transform:scale(1.07); }
+.node.acceptor.a1.flash { transform:translateX(-0%) scale(1.07); }
+.node.acceptor.a2.flash { transform:translateX(-50%) scale(1.07); }
+.node.acceptor.a3.flash { transform:translateX(-100%) scale(1.07); }
+.node.proposer.flash { transform:translateX(-50%) scale(1.07); }
+.node.learner.flash { transform:translateX(-50%) scale(1.07); }
+.network-line { position:absolute; height:2px; background:rgba(74,121,167,.20); transform-origin:0 50%; z-index:1; }
+.network-line.active { background:rgba(74,121,167,.65); }
+.packet-layer { position:absolute; inset:64px 0 64px; pointer-events:none; z-index:4; }
+.packet { position:absolute; width:12px; height:12px; border-radius:50%; box-shadow:0 0 0 6px rgba(255,255,255,.32), 0 5px 11px rgba(32,32,29,.18); animation:packet .55s ease forwards; }
+.packet.prepare { background:var(--gold); }
+.packet.accept { background:var(--rust); }
+.packet.reply { background:var(--green); }
+.packet.learn { background:var(--green); }
+@keyframes packet { to { transform:translate(var(--dx), var(--dy)); opacity:0; } }
+.stage-legend { position:absolute; bottom:36px; left:16px; display:flex; gap:16px; flex-wrap:wrap; font-family:var(--sans); font-size:10px; color:var(--muted); }
+.dot { width:7px; height:7px; display:inline-block; border-radius:50%; margin-right:5px; }
+.proposer-dot { background:var(--rust); }.acceptor-dot{background:var(--blue)}.learner-dot{background:var(--green)}
+.line-sample { display:inline-block; width:18px; height:2px; background:rgba(74,121,167,.5); margin-right:5px; vertical-align:middle; }
+.stage-footer { position:absolute; bottom:0; left:0; right:0; padding:9px 16px; border-top:1px solid var(--line); display:flex; justify-content:space-between; gap:10px; background:rgba(255,255,255,.22); font-family:var(--sans); font-size:10px; color:var(--muted); }
+.step-strip { display:flex; gap:8px; overflow:auto; padding:14px 0 2px; scrollbar-width:thin; }
+.step-pill { border:1px solid var(--line); background:transparent; color:var(--muted); padding:7px 10px; white-space:nowrap; font-family:var(--sans); font-size:10px; font-weight:800; border-radius:999px; }
+.step-pill span { display:inline-grid; place-items:center; width:17px; height:17px; border-radius:50%; margin-right:5px; background:rgba(32,32,29,.08); }
+.step-pill.active { background:rgba(255,255,255,.62); color:var(--ink); border-color:rgba(32,32,29,.35); }
+.step-pill.done span { background:var(--green); color:#fff; }
+
+.split-rule { border-top: 1px solid var(--line); }
+.formula { margin:26px 0; padding:22px; border:1px solid var(--line); background:rgba(255,255,255,.36); display:grid; grid-template-columns: 1fr auto; gap:10px 20px; align-items:center; }
+.formula span, .formula strong { font-family:var(--sans); }
+.formula span { font-size:16px; color:var(--muted); }
+.formula strong { font-size:20px; }
+.formula small { grid-column:1/-1; color:var(--muted); }
+.two-up { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:28px; }
+.mini-rule { padding:20px; border:1px solid var(--line); background:rgba(255,255,255,.32); }
+.mini-rule.accent { border-color:rgba(184,106,72,.35); }
+.mini-rule span { font-family:var(--sans); font-size:10px; font-weight:900; color:var(--muted); text-transform:uppercase; letter-spacing:.13em; }
+.mini-rule strong { display:block; margin-top:7px; font-family:var(--sans); font-size:18px; }
+.mini-rule p { margin:7px 0 0; font-size:15px; }
+
+.scenario-cards { display:grid; gap:10px; margin-top:33px; }
+.scenario-jump { text-align:left; border:1px solid var(--line); background:rgba(255,255,255,.35); display:grid; grid-template-columns:60px 1fr; gap:0 13px; padding:16px; }
+.scenario-jump span { grid-row:span 2; font-family:var(--sans); font-size:11px; font-weight:900; color:var(--muted); }
+.scenario-jump strong { font-family:var(--sans); font-size:16px; }
+.scenario-jump small { margin-top:5px; color:var(--muted); font-size:14px; line-height:1.4; }
+.scenario-jump:hover { background:rgba(255,255,255,.58); }
+
+.log-demo { margin-top:30px; border:1px solid var(--line); background:rgba(255,255,255,.3); }
+.log-row { display:grid; grid-template-columns:90px 1fr 80px; gap:12px; padding:12px 14px; border-bottom:1px solid var(--line); align-items:center; font-family:var(--sans); font-size:12px; }
+.log-row:last-child { border-bottom:0; }
+.log-row span { color:var(--muted); }.log-row i { font-style:normal; color:var(--green); }.log-row.ghost i { color:var(--muted); }.log-row.live { background:rgba(74,121,167,.06); }
+
+.takeaway { padding: 120px 0; }
+.takeaway-card { padding:50px; background:var(--ink); color:var(--paper); box-shadow: var(--shadow); }
+.takeaway-card .eyebrow { color:#b9cce0; }
+.takeaway-card h2 { max-width: 900px; }
+.takeaway-card p { max-width: 760px; color:rgba(246,242,233,.78); }
+.intersection-visual { margin-top:40px; display:flex; align-items:center; justify-content:center; gap:4px; flex-wrap:wrap; }
+.q { width:74px; height:74px; display:grid; place-items:center; border-radius:50%; background:var(--blue); color:#fff; font-family:var(--sans); font-weight:900; }
+.q.q2 { background:var(--rust); }
+.intersection-visual b { font-family:var(--sans); font-size:12px; margin-left:14px; color:var(--paper); }
+
+.references { padding: 0 0 110px; }
+.reference-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:30px; }
+.reference-grid a { min-height:160px; padding:20px; border:1px solid var(--line); background:rgba(255,255,255,.32); display:flex; flex-direction:column; }
+.reference-grid a:hover { background:rgba(255,255,255,.55); }
+.reference-grid span { font-family:var(--sans); font-size:10px; color:var(--muted); font-weight:900; }
+.reference-grid strong { font-family:var(--sans); font-size:16px; margin-top:auto; }
+.reference-grid small { color:var(--muted); margin-top:7px; }
+.footer-note { margin-top:36px; color:var(--muted); font-size:13px; }
+
+@media (max-width: 900px) {
+  .topnav { display:none; }
+  .hero { grid-template-columns:1fr; min-height:auto; padding:70px 0 90px; }
+  .hero-diagram { min-height:450px; margin-top:20px; }
+  .chapter { grid-template-columns: 1fr; gap:10px; }
+  .chapter-marker { padding-top:0; }
+  .role-grid, .reference-grid { grid-template-columns:1fr; }
+  .sim-layout { grid-template-columns:1fr; }
+  .sim-story { min-height: 0; }
+  .sim-controls { margin-top:28px; }
+}
+@media (max-width: 560px) {
+  body { font-size:18px; }
+  .topbar { padding:14px 18px; }
+  .section-shell { width: min(100% - 36px, 1120px); }
+  .hero h1 { font-size:70px; }
+  .hero-diagram { transform:scale(.82); margin-left:-7%; margin-right:-7%; }
+  .algorithm-section { padding-top:90px; }
+  .algorithm-header { align-items:flex-start; flex-direction:column; }
+  .stage-header { align-items:flex-start; flex-direction:column; }
+  .stage-actions { justify-content:flex-start; }
+  .two-up { grid-template-columns:1fr; }
+  .takeaway-card { padding:34px 24px; }
+  .intersection-visual { justify-content:flex-start; }
+}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><a href="#top">PAXOS</a><span>Understandable Consensus</span></div>
+    <nav class="topnav" aria-label="Primary navigation">
+      <a href="#problem">The problem</a>
+      <a href="#roles">Roles</a>
+      <a href="#algorithm">Algorithm</a>
+      <a href="#scenarios">Scenarios</a>
+      <a href="#multipaxos">Multi-Paxos</a>
+    </nav>
+  </header>
+
+  <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+
+  <main id="top">
+    <section class="hero section-shell">
+      <div class="hero-copy">
+        <p class="eyebrow">AN INTERACTIVE GUIDE</p>
+        <h1>Paxos,<br><em>made visible.</em></h1>
+        <p class="lede">A guided walkthrough of how a group of unreliable machines can still agree on one value.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#algorithm">Start the walkthrough <span>↓</span></a>
+          <a class="button button-ghost" href="#references">Read the sources</a>
+        </div>
+      </div>
+      <div class="hero-diagram" aria-label="A simplified Paxos quorum diagram">
+        <div class="orbit orbit-one"></div>
+        <div class="orbit orbit-two"></div>
+        <div class="hero-node hero-proposer">P<small>proposer</small></div>
+        <div class="hero-node hero-acceptor a1">A<small>acceptor</small></div>
+        <div class="hero-node hero-acceptor a2">A<small>acceptor</small></div>
+        <div class="hero-node hero-acceptor a3">A<small>acceptor</small></div>
+        <div class="hero-node hero-learner">L<small>learner</small></div>
+        <div class="hero-caption">a majority<br>is enough</div>
+      </div>
+    </section>
+
+    <section id="problem" class="section-shell chapter">
+      <div class="chapter-marker">01</div>
+      <div class="chapter-copy">
+        <p class="eyebrow">THE PROBLEM</p>
+        <h2>What does “agree” mean?</h2>
+        <p>Imagine three machines that must agree on a single decision: <strong>“Write X.”</strong> Messages can be delayed, duplicated, reordered, or lost. A machine can also crash.</p>
+        <p>Paxos is not trying to make the network reliable. It makes a stronger promise: <strong>if a value is chosen, a different value can never be chosen later.</strong></p>
+        <aside class="note"><span>Key idea</span> Consensus is about <em>agreement on one value</em>, not about making every message arrive.</aside>
+      </div>
+    </section>
+
+    <section id="roles" class="section-shell chapter">
+      <div class="chapter-marker">02</div>
+      <div class="chapter-copy wide">
+        <p class="eyebrow">THREE ROLES</p>
+        <h2>Same machines, different jobs.</h2>
+        <div class="role-grid">
+          <article class="role-card proposer-card">
+            <div class="role-icon">P</div>
+            <h3>Proposer</h3>
+            <p>Starts a proposal and tries to get a value accepted by a quorum.</p>
+            <code>prepare(n)</code><br><code>accept(n, v)</code>
+          </article>
+          <article class="role-card acceptor-card">
+            <div class="role-icon">A</div>
+            <h3>Acceptor</h3>
+            <p>Guards the decision. It remembers the highest proposal it has promised and accepted.</p>
+            <code>promise(n)</code><br><code>accepted(n, v)</code>
+          </article>
+          <article class="role-card learner-card">
+            <div class="role-icon">L</div>
+            <h3>Learner</h3>
+            <p>Finds out which value was chosen. It can be another process, or the proposers themselves.</p>
+            <code>chosen(v)</code>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="algorithm" class="section-shell algorithm-section">
+      <div class="algorithm-header">
+        <div>
+          <p class="eyebrow">03 · THE ALGORITHM</p>
+          <h2>Watch one decision happen.</h2>
+        </div>
+        <div class="quorum-chip"><span>Quorum</span><strong id="quorumDisplay">2 of 3</strong></div>
+      </div>
+
+      <div class="sim-layout">
+        <aside class="sim-story" aria-live="polite">
+          <div class="story-kicker">NOW</div>
+          <div id="storyStep" class="story-step">1 / 8</div>
+          <h3 id="storyTitle">Choose a proposal number</h3>
+          <p id="storyBody">A proposer picks a number that is unique and higher than any number it has seen.</p>
+          <div class="callout" id="storyCallout">Proposal numbers are ordered: 11 beats 7, no matter who sent them.</div>
+          <div class="sim-controls">
+            <button id="prevBtn" class="button button-ghost compact">← Back</button>
+            <button id="nextBtn" class="button button-primary compact">Next →</button>
+          </div>
+          <button id="playBtn" class="text-button">▶ Play animation</button>
+        </aside>
+
+        <div class="sim-stage" id="simStage">
+          <div class="stage-header">
+            <span id="stageScenario">SCENARIO · BASIC AGREEMENT</span>
+            <div class="stage-actions">
+              <button class="scenario-btn active" data-scenario="basic">Basic</button>
+              <button class="scenario-btn" data-scenario="competition">Competing proposers</button>
+              <button class="scenario-btn" data-scenario="failure">Acceptor failure</button>
+            </div>
+          </div>
+          <div class="network" id="network" aria-label="Interactive Paxos message visualization"></div>
+          <div class="packet-layer" id="packetLayer" aria-hidden="true"></div>
+          <div class="stage-legend">
+            <span><i class="dot proposer-dot"></i> proposer</span>
+            <span><i class="dot acceptor-dot"></i> acceptor</span>
+            <span><i class="dot learner-dot"></i> learner</span>
+            <span><i class="line-sample"></i> message</span>
+          </div>
+          <div class="stage-footer">
+            <span id="eventLog">Waiting to begin…</span>
+            <button id="resetBtn" class="text-button">Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-strip" id="stepStrip">
+        <button class="step-pill active" data-step="0"><span>1</span> Prepare</button>
+        <button class="step-pill" data-step="1"><span>2</span> Promise</button>
+        <button class="step-pill" data-step="2"><span>3</span> Quorum</button>
+        <button class="step-pill" data-step="3"><span>4</span> Accept</button>
+        <button class="step-pill" data-step="4"><span>5</span> Accepted</button>
+        <button class="step-pill" data-step="5"><span>6</span> Chosen</button>
+        <button class="step-pill" data-step="6"><span>7</span> Learn</button>
+        <button class="step-pill" data-step="7"><span>8</span> Why it works</button>
+      </div>
+    </section>
+
+    <section class="section-shell chapter split-rule">
+      <div class="chapter-marker">04</div>
+      <div class="chapter-copy">
+        <p class="eyebrow">PHASE 1</p>
+        <h2>Prepare is a promise about the future.</h2>
+        <p>Suppose proposer <strong>P1</strong> chooses proposal number <strong>11</strong>. It sends <code>prepare(11)</code> to the acceptors.</p>
+        <div class="formula"><span>if n &gt; promised</span><strong>promise(11)</strong><small>“I won’t accept anything smaller than 11.”</small></div>
+        <p>Each promise also reports the highest proposal the acceptor has already accepted, if any. That single detail is what lets a later proposer preserve an earlier decision.</p>
+      </div>
+    </section>
+
+    <section class="section-shell chapter">
+      <div class="chapter-marker">05</div>
+      <div class="chapter-copy">
+        <p class="eyebrow">PHASE 2</p>
+        <h2>Accept carries the value.</h2>
+        <p>Once P1 has promises from a majority, it sends <code>accept(11, X)</code>. The value is <strong>X</strong> only if the promises contained no earlier accepted value.</p>
+        <div class="two-up">
+          <div class="mini-rule"><span>Case A</span><strong>No accepted value</strong><p>P1 may propose its own value.</p></div>
+          <div class="mini-rule accent"><span>Case B</span><strong>Older accepted value exists</strong><p>P1 must carry forward the value attached to the highest accepted proposal it learned about.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="scenarios" class="section-shell chapter">
+      <div class="chapter-marker">06</div>
+      <div class="chapter-copy">
+        <p class="eyebrow">THE INTERESTING PART</p>
+        <h2>Now break the happy path.</h2>
+        <p>Paxos becomes memorable when two proposers race, or an acceptor disappears. The same rule still holds: a new proposal can move forward, but it cannot forget a value that a previous quorum may have chosen.</p>
+        <div class="scenario-cards">
+          <button class="scenario-jump" data-scenario-jump="competition"><span>01</span><strong>Two proposers race</strong><small>P2 uses a higher proposal number, then learns what P1 may already have accepted.</small></button>
+          <button class="scenario-jump" data-scenario-jump="failure"><span>02</span><strong>One acceptor crashes</strong><small>With three acceptors, two replies are enough. The quorum survives a single crash.</small></button>
+          <button class="scenario-jump" data-scenario-jump="competition"><span>03</span><strong>The old value survives</strong><small>The promise phase carries forward the highest accepted value instead of replacing it.</small></button>
+        </div>
+      </div>
+    </section>
+
+    <section id="multipaxos" class="section-shell chapter split-rule">
+      <div class="chapter-marker">07</div>
+      <div class="chapter-copy">
+        <p class="eyebrow">FROM ONE DECISION TO A LOG</p>
+        <h2>Multi-Paxos changes the rhythm.</h2>
+        <p>Classic Paxos decides one value at a time. Real replicated state machines need a sequence of values. Multi-Paxos keeps a stable leader/proposer and reuses its Phase 1 preparation across many log slots, avoiding a full round of prepare messages for every command.</p>
+        <div class="log-demo">
+          <div class="log-row"><span>slot 41</span><b>SET x = 1</b><i>chosen</i></div>
+          <div class="log-row"><span>slot 42</span><b>SET y = 9</b><i>chosen</i></div>
+          <div class="log-row live"><span>slot 43</span><b>SET z = 4</b><i>accepting</i></div>
+          <div class="log-row ghost"><span>slot 44</span><b>—</b><i>empty</i></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-shell takeaway">
+      <div class="takeaway-card">
+        <p class="eyebrow">THE ONE THING TO REMEMBER</p>
+        <h2>A quorum intersection is the bridge between the past and the future.</h2>
+        <p>With three acceptors, any two form a quorum. Any later quorum must overlap an earlier quorum in at least one acceptor. That overlap is where the memory of the earlier decision survives.</p>
+        <div class="intersection-visual"><span class="q q1">A1</span><span class="q q1">A2</span><span class="q q2">A2</span><span class="q q2">A3</span><b>A2 = the overlap</b></div>
+      </div>
+    </section>
+
+    <section id="references" class="section-shell references">
+      <p class="eyebrow">FURTHER READING</p>
+      <h2>Go to the source.</h2>
+      <div class="reference-grid">
+        <a href="https://pdos.csail.mit.edu/6.824/papers/paxos-simple.pdf" target="_blank" rel="noreferrer"><span>01</span><strong>Paxos Made Simple</strong><small>Leslie Lamport · 2001</small></a>
+        <a href="https://pdos.csail.mit.edu/6.824/quizzes/q1-15-ans.pdf" target="_blank" rel="noreferrer"><span>02</span><strong>MIT Paxos pseudo-code</strong><small>6.824 / 6.5840 teaching material</small></a>
+        <a href="https://github.com/benbjohnson/thesecretlivesofdata" target="_blank" rel="noreferrer"><span>03</span><strong>The Secret Lives of Data</strong><small>Interactive inspiration · Raft</small></a>
+      </div>
+      <p class="footer-note">This site is an independent educational visualization. It is inspired by the narrative approach of The Secret Lives of Data and is not affiliated with its author.</p>
+    </section>
+  </main>
+
+  <script>
+const scenarioData = {
+  basic: {
+    label: 'SCENARIO · BASIC AGREEMENT',
+    quorum: '2 of 3',
+    nodes: { a1: 'up', a2: 'up', a3: 'up' },
+    steps: [
+      { title: 'Choose a proposal number', body: 'P1 picks a proposal number that is unique and higher than any number it has seen.', callout: 'Proposal numbers are ordered: 11 beats 7, no matter who sent them.', event: 'P1 chooses proposal 11.', packets: ['prepare'] },
+      { title: 'Ask for promises', body: 'P1 sends prepare(11) to the acceptors. A prepare does not carry the value yet.', callout: 'Phase 1 is about claiming a place in the ordering.', event: 'prepare(11) sent to A1, A2, A3.', packets: ['prepare','prepare','prepare'] },
+      { title: 'A majority says “promise”', body: 'A1 and A2 promise not to accept any proposal numbered below 11. Their responses form a quorum.', callout: 'The proposer only needs a majority, not every acceptor.', event: 'A1 + A2 promise. Quorum reached.', packets: ['reply','reply'] },
+      { title: 'Send the value', body: 'No acceptor reported an earlier accepted value, so P1 can choose its own value: X.', callout: 'accept(11, X) is the first moment the value itself enters the protocol.', event: 'P1 sends accept(11, X).', packets: ['accept','accept','accept'] },
+      { title: 'Acceptors remember', body: 'A1 and A2 accept (11, X). Each records its highest accepted proposal.', callout: 'That memory is what protects a future proposal from choosing Y instead.', event: 'A1 + A2 accepted (11, X).', packets: ['reply','reply'] },
+      { title: 'X is chosen', body: 'Because a majority accepted proposal 11 with value X, X is now chosen for this consensus instance.', callout: 'Chosen means the protocol can never legitimately choose a different value later.', event: 'Value X is chosen.', packets: ['learn'] },
+      { title: 'Learners find out', body: 'A learner can learn the chosen value from acceptors, or proposers can broadcast a “chosen” notification.', callout: 'Learning is separate from choosing: the decision can exist before every process knows it.', event: 'L learns X.', packets: ['learn'] },
+      { title: 'Why did this work?', body: 'Any future majority must overlap the previous majority in at least one acceptor. That acceptor carries evidence of the highest accepted proposal it has seen.', callout: 'Quorum intersection connects the past to every future proposal.', event: 'Safety invariant preserved.', packets: [] }
+    ]
+  },
+  competition: {
+    label: 'SCENARIO · COMPETING PROPOSERS',
+    quorum: '2 of 3',
+    nodes: { a1: 'up', a2: 'up', a3: 'up' },
+    steps: [
+      { title: 'P1 starts with X', body: 'P1 uses proposal 11 and sends prepare(11). It is racing another proposer.', callout: 'Concurrency is allowed. Paxos does not require a single proposer.', event: 'P1 starts proposal 11 for X.', packets: ['prepare','prepare'] },
+      { title: 'P2 jumps ahead', body: 'P2 chooses a higher proposal number, 21, and sends prepare(21). Higher numbers can preempt lower ones.', callout: 'A higher number does not automatically imply a different value.', event: 'P2 starts proposal 21.', packets: ['prepare','prepare','prepare'] },
+      { title: 'Promises reveal history', body: 'An acceptor that has already accepted (11, X) includes that pair in its promise to P2.', callout: 'P2 now has evidence that X may already be chosen.', event: 'P2 learns about X from an acceptor.', packets: ['reply','reply'] },
+      { title: 'P2 must carry X forward', body: 'Because P2 received an earlier accepted value, it cannot safely replace it with Y. It proposes X under the higher number 21.', callout: 'The proposal number can change; the value cannot be forgotten.', event: 'P2 sends accept(21, X).', packets: ['accept','accept','accept'] },
+      { title: 'The newer proposal wins the race', body: 'Acceptors can accept 21 after promising 21. The value remains X.', callout: 'Paxos allows leadership to move while preserving the decided value.', event: 'A majority accepts (21, X).', packets: ['reply','reply'] },
+      { title: 'Still only one value', body: 'Even though two proposers raced, every valid future majority is constrained by the promises that expose accepted history.', callout: 'Agreement survives concurrent proposals.', event: 'X remains the chosen value.', packets: ['learn'] },
+      { title: 'Learn X', body: 'A learner receives evidence for proposal 21 and concludes that X is chosen.', callout: 'The learner can ignore how messy the race looked.', event: 'L learns X.', packets: ['learn'] },
+      { title: 'The rule to remember', body: 'Higher proposal numbers provide progress; returned accepted values provide safety.', callout: 'Number moves forward. Value may have to stay the same.', event: 'Safety invariant preserved.', packets: [] }
+    ]
+  },
+  failure: {
+    label: 'SCENARIO · ACCEPTOR FAILURE',
+    quorum: '2 of 3',
+    nodes: { a1: 'up', a2: 'down', a3: 'up' },
+    steps: [
+      { title: 'One acceptor disappears', body: 'A2 crashes before responding. Paxos can still make progress because two of three acceptors are enough for a quorum.', callout: 'Fault tolerance comes from requiring less than all nodes.', event: 'A2 is offline.', packets: [] },
+      { title: 'Prepare still reaches a quorum', body: 'P1 sends prepare(11). A1 and A3 respond; A2 does not.', callout: 'A missing message is not a contradiction. The protocol can continue around it.', event: 'A1 + A3 reply.', packets: ['prepare','prepare','reply','reply'] },
+      { title: 'Two promises are enough', body: 'P1 now has a quorum, so it may continue to Phase 2 using the normal value-selection rule.', callout: 'A quorum is a threshold, not a fixed pair of machines.', event: 'Quorum reached with A1 + A3.', packets: [] },
+      { title: 'Send accept to the live nodes', body: 'P1 sends accept(11, X). A2 is still down, but that does not block a majority.', callout: 'Paxos does not wait for the slowest process.', event: 'accept(11, X) sent to A1 + A3.', packets: ['accept','accept'] },
+      { title: 'The live majority accepts', body: 'A1 and A3 accept (11, X). That is a majority of the three acceptors.', callout: 'Two accepts are enough to choose X.', event: 'A1 + A3 accepted (11, X).', packets: ['reply','reply'] },
+      { title: 'X is chosen anyway', body: 'A2 can be completely unaware for the moment. The decision is still chosen because a quorum accepted it.', callout: 'A crash can delay knowledge without changing the chosen value.', event: 'Value X is chosen.', packets: ['learn'] },
+      { title: 'A2 can return later', body: 'When A2 recovers, it can learn the decision and catch up. Safety never depended on A2 being online.', callout: 'Recovery is about learning and restoring state—not renegotiating the decision.', event: 'A2 is ready to catch up.', packets: ['learn'] },
+      { title: 'Quorum intersection again', body: 'The same intersection property is doing the work. Any future quorum must overlap A1+A3 somewhere.', callout: 'With 3 acceptors, Paxos tolerates 1 acceptor failure while preserving safety.', event: 'Safety invariant preserved.', packets: [] }
+    ]
+  }
+};
+
+const state = { scenario: 'basic', step: 0, playing: false, timer: null };
+const els = {
+  network: document.getElementById('network'),
+  packetLayer: document.getElementById('packetLayer'),
+  storyStep: document.getElementById('storyStep'),
+  storyTitle: document.getElementById('storyTitle'),
+  storyBody: document.getElementById('storyBody'),
+  storyCallout: document.getElementById('storyCallout'),
+  eventLog: document.getElementById('eventLog'),
+  nextBtn: document.getElementById('nextBtn'),
+  prevBtn: document.getElementById('prevBtn'),
+  resetBtn: document.getElementById('resetBtn'),
+  playBtn: document.getElementById('playBtn'),
+  stageScenario: document.getElementById('stageScenario'),
+  quorumDisplay: document.getElementById('quorumDisplay'),
+  progressBar: document.getElementById('progressBar')
+};
+
+function buildNetwork() {
+  els.network.innerHTML = '';
+  const nodes = [
+    ['p1', 'P1', 'proposer', 'proposer'],
+    ['a1', 'A1', 'acceptor a1', 'acceptor'],
+    ['a2', 'A2', 'acceptor a2', 'acceptor'],
+    ['a3', 'A3', 'acceptor a3', 'acceptor'],
+    ['l1', 'L', 'learner', 'learner']
+  ];
+  nodes.forEach(([id, label, cls, role]) => {
+    const el = document.createElement('div');
+    el.className = `node ${cls}`;
+    el.dataset.id = id;
+    el.innerHTML = `<span>${label}</span><small class="node-name">${role}</small>`;
+    els.network.appendChild(el);
+  });
+
+  [['p1','a1'],['p1','a2'],['p1','a3'],['a1','l1'],['a2','l1'],['a3','l1']].forEach(([a,b]) => {
+    const line = document.createElement('div');
+    line.className = 'network-line';
+    line.dataset.from = a;
+    line.dataset.to = b;
+    els.network.appendChild(line);
+  });
+  layoutLines();
+}
+
+function getPoint(id) {
+  const node = els.network.querySelector(`[data-id="${id}"]`);
+  const rect = node.getBoundingClientRect();
+  const parent = els.network.getBoundingClientRect();
+  return {
+    x: rect.left + rect.width / 2 - parent.left,
+    y: rect.top + rect.height / 2 - parent.top
+  };
+}
+
+function layoutLines() {
+  requestAnimationFrame(() => {
+    els.network.querySelectorAll('.network-line').forEach(line => {
+      const a = getPoint(line.dataset.from);
+      const b = getPoint(line.dataset.to);
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const length = Math.hypot(dx, dy);
+      line.style.left = `${a.x}px`;
+      line.style.top = `${a.y}px`;
+      line.style.width = `${length}px`;
+      line.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
+    });
+  });
+}
+
+function clearFlash() {
+  els.network.querySelectorAll('.node').forEach(n => n.classList.remove('flash', 'quorum'));
+  els.network.querySelectorAll('.network-line').forEach(l => l.classList.remove('active'));
+}
+
+function markScenarioNodes() {
+  const nodes = scenarioData[state.scenario].nodes;
+  Object.entries(nodes).forEach(([id,status]) => {
+    const el = els.network.querySelector(`[data-id="${id}"]`);
+    if (!el) return;
+    el.classList.toggle('down', status === 'down');
+  });
+  const learner = els.network.querySelector('[data-id="l1"]');
+  learner.classList.remove('down');
+  if (state.scenario === 'competition') {
+    const p = els.network.querySelector('[data-id="p1"]');
+    p.querySelector('span').textContent = 'P1';
+  }
+}
+
+function flashNodes(ids) {
+  ids.forEach(id => {
+    const el = els.network.querySelector(`[data-id="${id}"]`);
+    if (el) el.classList.add('flash');
+  });
+}
+
+function highlightQuorum(ids) {
+  ids.forEach(id => {
+    const el = els.network.querySelector(`[data-id="${id}"]`);
+    if (el) el.classList.add('quorum');
+  });
+}
+
+function sendPacket(from, to, type='prepare', delay=0) {
+  const packet = document.createElement('div');
+  packet.className = `packet ${type}`;
+  els.packetLayer.appendChild(packet);
+  const a = getPoint(from); const b = getPoint(to);
+  packet.style.left = `${a.x - 6}px`;
+  packet.style.top = `${a.y - 6}px`;
+  packet.style.setProperty('--dx', `${b.x - a.x}px`);
+  packet.style.setProperty('--dy', `${b.y - a.y}px`);
+  packet.style.animationDelay = `${delay}ms`;
+  setTimeout(() => packet.remove(), 900 + delay);
+}
+
+function animateStep(stepData) {
+  clearFlash();
+  const s = state.scenario;
+  if (s === 'basic') {
+    if (state.step === 0) flashNodes(['p1']);
+    if (state.step === 1) { flashNodes(['p1','a1','a2','a3']); ['a1','a2','a3'].forEach((n,i)=>sendPacket('p1',n,'prepare',i*80)); }
+    if (state.step === 2) { flashNodes(['a1','a2']); highlightQuorum(['a1','a2']); ['a1','a2'].forEach((n,i)=>sendPacket(n,'p1','reply',i*90)); }
+    if (state.step === 3) { flashNodes(['p1']); ['a1','a2','a3'].forEach((n,i)=>sendPacket('p1',n,'accept',i*80)); }
+    if (state.step === 4) { flashNodes(['a1','a2']); highlightQuorum(['a1','a2']); ['a1','a2'].forEach((n,i)=>sendPacket(n,'p1','reply',i*90)); }
+    if (state.step === 5) { flashNodes(['a1','a2']); highlightQuorum(['a1','a2']); sendPacket('a1','l1','learn'); sendPacket('a2','l1','learn',130); }
+    if (state.step === 6) flashNodes(['l1']);
+    if (state.step === 7) { highlightQuorum(['a1','a2']); flashNodes(['a1','a2']); }
+  }
+  if (s === 'competition') {
+    if (state.step === 0) { flashNodes(['p1']); sendPacket('p1','a1','prepare'); sendPacket('p1','a2','prepare',100); }
+    if (state.step === 1) {
+      const p2 = els.network.querySelector('[data-id="p1"]');
+      p2.querySelector('span').textContent = 'P2'; flashNodes(['p1']);
+      sendPacket('p1','a1','prepare'); sendPacket('p1','a3','prepare',100);
+    }
+    if (state.step === 2) { flashNodes(['a1','a2']); highlightQuorum(['a1','a2']); sendPacket('a1','p1','reply'); sendPacket('a2','p1','reply',100); }
+    if (state.step === 3) { flashNodes(['p1']); ['a1','a2','a3'].forEach((n,i)=>sendPacket('p1',n,'accept',i*80)); }
+    if (state.step === 4) { flashNodes(['a1','a2']); highlightQuorum(['a1','a2']); sendPacket('a1','p1','reply'); sendPacket('a2','p1','reply',100); }
+    if (state.step === 5) { highlightQuorum(['a1','a2']); flashNodes(['a1','a2']); }
+    if (state.step === 6) { flashNodes(['l1']); sendPacket('a1','l1','learn'); }
+    if (state.step === 7) { highlightQuorum(['a1','a2']); }
+  }
+  if (s === 'failure') {
+    if (state.step === 0) { flashNodes(['a2']); }
+    if (state.step === 1) { flashNodes(['a1','a3']); highlightQuorum(['a1','a3']); sendPacket('p1','a1','prepare'); sendPacket('p1','a3','prepare',90); }
+    if (state.step === 2) highlightQuorum(['a1','a3']);
+    if (state.step === 3) { flashNodes(['a1','a3']); ['a1','a3'].forEach((n,i)=>sendPacket('p1',n,'accept',i*100)); }
+    if (state.step === 4) { highlightQuorum(['a1','a3']); sendPacket('a1','p1','reply'); sendPacket('a3','p1','reply',100); }
+    if (state.step === 5) { highlightQuorum(['a1','a3']); flashNodes(['a1','a3']); sendPacket('a1','l1','learn'); }
+    if (state.step === 6) { const a2 = els.network.querySelector('[data-id="a2"]'); a2.classList.remove('down'); flashNodes(['a2']); }
+    if (state.step === 7) { highlightQuorum(['a1','a3']); }
+  }
+}
+
+function render() {
+  const data = scenarioData[state.scenario];
+  const step = data.steps[state.step];
+  els.storyStep.textContent = `${state.step + 1} / ${data.steps.length}`;
+  els.storyTitle.textContent = step.title;
+  els.storyBody.textContent = step.body;
+  els.storyCallout.textContent = step.callout;
+  els.eventLog.textContent = step.event;
+  els.stageScenario.textContent = data.label;
+  els.quorumDisplay.textContent = data.quorum;
+  els.nextBtn.disabled = state.step === data.steps.length - 1;
+  els.prevBtn.disabled = state.step === 0;
+  els.nextBtn.style.opacity = state.step === data.steps.length - 1 ? '.45' : '1';
+  els.prevBtn.style.opacity = state.step === 0 ? '.45' : '1';
+  document.querySelectorAll('.step-pill').forEach((pill, i) => {
+    pill.classList.toggle('active', i === state.step);
+    pill.classList.toggle('done', i < state.step);
+  });
+  if (state.scenario === 'competition' && state.step > 0) {
+    const p = els.network.querySelector('[data-id="p1"]');
+    p.querySelector('span').textContent = 'P2';
+  } else {
+    const p = els.network.querySelector('[data-id="p1"]');
+    p.querySelector('span').textContent = 'P1';
+  }
+  markScenarioNodes();
+  animateStep(step);
+}
+
+function setScenario(name) {
+  if (!scenarioData[name]) return;
+  state.scenario = name;
+  state.step = 0;
+  state.playing = false;
+  clearInterval(state.timer);
+  els.playBtn.textContent = '▶ Play animation';
+  document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.scenario === name));
+  buildNetwork();
+  render();
+}
+
+function next() {
+  const max = scenarioData[state.scenario].steps.length - 1;
+  if (state.step < max) {
+    state.step += 1;
+    render();
+  } else {
+    stopPlay();
+  }
+}
+function prev() { if (state.step > 0) { state.step -= 1; render(); } }
+function stopPlay() { state.playing = false; clearInterval(state.timer); els.playBtn.textContent = '▶ Play animation'; }
+function togglePlay() {
+  if (state.playing) { stopPlay(); return; }
+  state.playing = true;
+  els.playBtn.textContent = 'Ⅱ Pause animation';
+  state.timer = setInterval(() => {
+    const max = scenarioData[state.scenario].steps.length - 1;
+    if (state.step >= max) stopPlay(); else next();
+  }, 2400);
+}
+
+els.nextBtn.addEventListener('click', next);
+els.prevBtn.addEventListener('click', prev);
+els.resetBtn.addEventListener('click', () => { state.step = 0; stopPlay(); render(); });
+els.playBtn.addEventListener('click', togglePlay);
+document.querySelectorAll('.scenario-btn').forEach(btn => btn.addEventListener('click', () => setScenario(btn.dataset.scenario)));
+document.querySelectorAll('.step-pill').forEach(btn => btn.addEventListener('click', () => { state.step = Number(btn.dataset.step); stopPlay(); render(); }));
+document.querySelectorAll('.scenario-jump').forEach(btn => btn.addEventListener('click', () => {
+  setScenario(btn.dataset.scenarioJump);
+  document.getElementById('algorithm').scrollIntoView({ behavior:'smooth' });
+}));
+window.addEventListener('resize', layoutLines);
+window.addEventListener('scroll', () => {
+  const max = document.documentElement.scrollHeight - window.innerHeight;
+  els.progressBar.style.width = `${max ? (window.scrollY / max) * 100 : 0}%`;
+});
+
+buildNetwork();
+render();
+  </script>
+</body>
+</html>
