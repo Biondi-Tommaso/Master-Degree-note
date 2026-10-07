@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Air Looks Safe - Color & Perception</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #fbfbfd;
+  --sf: #ffffff;
+  --ink: #1d1d1f;
+  --mute: #6e6e73;
+  --line: #e5e5ea;
+  --a: #0071e3;
+  --b: #ff9f0a;
+  --gray: #8e8e93;
+  --red: #ff3b30;
+  --ok: #30a14e;
+  --sh: 0 10px 40px rgba(0,0,0,.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000;
+    --sf: #161618;
+    --ink: #f5f5f7;
+    --mute: #a1a1a6;
+    --line: #2c2c2e;
+    --a: #2997ff;
+    --sh: 0 10px 40px rgba(0,0,0,.6);
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Inter, -apple-system, "SF Pro Display", system-ui, sans-serif;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hero Section */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.hero small {
+  color: var(--mute);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  animation: up 1s both;
+}
+
+.hero h1 {
+  font-size: clamp(2.5rem, 7vw, 6rem);
+  font-weight: 800;
+  letter-spacing: -.045em;
+  line-height: 1.05;
+  margin: 0;
+  max-width: 16ch;
+  animation: up 1s .15s both;
+}
+
+.hero h1 span {
+  background: linear-gradient(90deg, var(--a), #af52de 60%, var(--b));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero p {
+  color: var(--mute);
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  max-width: 35ch;
+  margin: 22px 0 0;
+  animation: up 1s .3s both;
+}
+
+.cue {
+  margin-top: 48px;
+  width: 26px;
+  height: 44px;
+  border: 2px solid var(--mute);
+  border-radius: 14px;
+  position: relative;
+  animation: up 1s .5s both;
+}
+
+.cue::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  width: 4px;
+  height: 8px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: var(--mute);
+  animation: sc 1.6s infinite;
+}
+
+@keyframes sc {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(14px); }
+}
+
+@keyframes up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Main Story Layout */
+.story {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 40px;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.steps {
+  padding: 10vh 0;
+}
+
+.step {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  opacity: .25;
+  transform: scale(.96);
+  transition: opacity .5s, transform .5s;
+}
+
+.step.on {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.card {
+  background: var(--sf);
+  border-radius: 28px;
+  padding: 36px;
+  box-shadow: var(--sh);
+  width: 100%;
+  border: 1px solid var(--line);
+}
+
+.card h2 {
+  font-size: clamp(1.5rem, 2.5vw, 2.2rem);
+  letter-spacing: -.03em;
+  line-height: 1.2;
+  margin: 0 0 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.card p {
+  color: var(--mute);
+  font-size: 1.05rem;
+  margin: 0 0 12px;
+}
+
+.card b {
+  color: var(--ink);
+}
+
+.stick {
+  position: sticky;
+  top: 15vh;
+  align-self: start;
+  height: fit-content;
+  padding-top: 10vh;
+}
+
+.chart {
+  background: var(--sf);
+  border-radius: 32px;
+  box-shadow: var(--sh);
+  padding: 24px;
+  position: relative;
+  border: 1px solid var(--line);
+}
+
+canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.tag {
+  margin-bottom: 12px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.tag small {
+  display: block;
+  color: var(--mute);
+  font-weight: 500;
+  font-size: .85rem;
+  margin-top: 2px;
+}
+
+.legend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-weight: 600;
+  font-size: .9rem;
+  margin-top: 14px;
+  color: var(--ink);
+}
+
+.dot {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+input[type=range] {
+  width: 100%;
+  accent-color: var(--a);
+  margin-top: 16px;
+}
+
+.lab {
+  display: flex;
+  justify-content: space-between;
+  color: var(--mute);
+  font-weight: 600;
+  font-size: .9rem;
+  margin-top: 8px;
+}
+
+@media (max-width: 820px) {
+  .story {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .stick {
+    position: relative;
+    top: 0;
+    padding-top: 0;
+  }
+  .step {
+    min-height: 50vh;
+  }
+}
+
+/* Quiz Section */
+.quiz {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12vh 24px 8vh;
+}
+
+.quiz h2 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  letter-spacing: -.04em;
+  margin: 0 0 30px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.qc {
+  background: var(--sf);
+  border-radius: 32px;
+  box-shadow: var(--sh);
+  padding: 32px;
+  border: 1px solid var(--line);
+}
+
+.qc h3 {
+  font-size: 1.35rem;
+  letter-spacing: -.02em;
+  margin: 0 0 20px;
+  color: var(--ink);
+}
+
+.opt {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-weight: 500;
+  font-size: 1rem;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform .2s, border-color .2s, background .3s;
+}
+
+.opt:hover {
+  transform: scale(1.01);
+  border-color: var(--mute);
+}
+
+.opt.right {
+  border-color: var(--ok);
+  background: rgba(48,161,78,.14);
+}
+
+.opt.wrong {
+  border-color: var(--red);
+  background: rgba(255,59,48,.12);
+}
+
+.exp {
+  display: none;
+  color: var(--mute);
+  font-size: .95rem;
+  margin-top: 14px;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: 12px;
+}
+
+.exp.show {
+  display: block;
+}
+
+.foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.btn {
+  font: inherit;
+  font-weight: 600;
+  border: 0;
+  background: var(--a);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* End Section */
+.end {
+  text-align: center;
+  padding: 10vh 24px 16vh;
+}
+
+.end h2 {
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -.045em;
+  margin: 0 auto;
+  max-width: 16ch;
+}
+
+.end p {
+  color: var(--mute);
+  font-size: 1.25rem;
+  margin-top: 18px;
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <small>Data Visualization & Perception</small>
+  <h1>The air looks <span>safe.</span></h1>
+  <p>Does transparency solve overplotting without changing the message?</p>
+  <div class="cue" aria-hidden="true"></div>
+</header>
+
+<main class="story">
+  <div class="steps">
+    <!-- Step 0 -->
+    <div class="step on" data-s="0">
+      <div class="card">
+        <h2>1. The Claim & Overplotting</h2>
+        <p>We start with a common assumption: <i>"Transparency solves overplotting without changing the message."</i></p>
+        <p>When rendering 3,000 data points with solid dots, <b>Harbor hides Old Town</b>. The overlap creates severe visual clutter.</p>
+      </div>
+    </div>
+    
+    <!-- Step 1 -->
+    <div class="step" data-s="1">
+      <div class="card">
+        <h2>2. Transparency Slicer</h2>
+        <p>Lowering opacity reveals hidden density. Try adjusting the opacity slider below.</p>
+        <p>Notice that while density becomes visible, low opacity communicates <b>uncertainty or lower importance</b> (similar to confidence intervals).</p>
+        <input type="range" id="op" min="5" max="100" value="10" aria-label="Opacity">
+        <div class="lab"><span>Faint (5%)</span><b id="opv">10%</b><span>Solid (100%)</span></div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step" data-s="2">
+      <div class="card">
+        <h2>3. Desaturation Slicer</h2>
+        <p>Desaturation removes color intensity while keeping marks fully opaque. Adjust the saturation slider below.</p>
+        <p>Desaturation signals lower visual weight, but <b>does NOT solve overplotting</b>: opaque dots still physically obscure each other!</p>
+        <input type="range" id="sat" min="0" max="100" value="0" aria-label="Saturation">
+        <div class="lab"><span>Muted / Gray (0%)</span><b id="satv">0% Desaturated</b><span>Vivid Color (100%)</span></div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step" data-s="3">
+      <div class="card">
+        <h2>4. Pre-attentive Attention & "Start with Gray"</h2>
+        <p>Instead of assigning bright colors everywhere, start with a <b>neutral gray baseline</b>.</p>
+        <p>Use intense color selectively to trigger <i>pre-attentive processing</i>—directing focal attention immediately to critical readings above the limit.</p>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step" data-s="4">
+      <div class="card">
+        <h2>5. Application & Limitations</h2>
+        <p>By highlighting only critical points in red against a gray baseline, the visual story is clear and immediate.</p>
+        <p><b>Limitations:</b> Too many focal points cause visual clutter, and color choices must account for colorblind accessibility.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="stick">
+    <div class="chart">
+      <div class="tag" id="tag"></div>
+      <canvas id="cv" width="900" height="620" aria-label="Scatter plot of PM2.5 readings against traffic level"></canvas>
+      <div class="legend" id="lg"></div>
+    </div>
+  </div>
+</main>
+
+<section class="quiz">
+  <h2>Test Your Knowledge</h2>
+  <div class="qc">
+    <h3 id="qq"></h3>
+    <div id="qo"></div>
+    <div class="exp" id="qe"><div id="qt"></div></div>
+    <div class="foot">
+      <span id="qs" style="color:var(--mute);font-weight:600"></span>
+      <button class="btn" id="qn">Next</button>
+    </div>
+  </div>
+</section>
+
+<section class="end">
+  <h2>Transparency is never neutral.</h2>
+  <p>It encodes visual meaning: uncertainty, confidence, and hierarchy.</p>
+</section>
+
+<script>
+// Data generation logic
+let seed = 5;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const gauss = () => Math.sqrt(-2 * Math.log(rnd() + 1e-9)) * Math.cos(2 * Math.PI * rnd());
+const LIM = 50;
+
+const mk = (m, s) => Array.from({ length: 1500 }, () => {
+  const x = Math.min(100, Math.max(0, 50 + gauss() * 22));
+  return [x, Math.max(2, m + .08 * x + gauss() * s)];
+});
+
+const OT = mk(18, 7);
+const HB = mk(26, 12);
+const EX = [...OT, ...HB].filter(p => p[1] > LIM);
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const dpr = Math.min(window.devicePixelRatio || 1, 2);
+cv.width = 900 * dpr;
+cv.height = 620 * dpr;
+ctx.scale(dpr, dpr);
+
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const X = x => 60 + x * 7.8;
+const Y = y => 560 - y * 6.9;
+
+const hexToRgb = hex => {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  const num = parseInt(hex, 16);
+  return [num >> 16, (num >> 8) & 255, num & 255];
+};
+
+const mixColors = (c1, c2, t) => {
+  return [
+    Math.round(c1[0] + (c2[0] - c1[0]) * t),
+    Math.round(c1[1] + (c2[1] - c1[1]) * t),
+    Math.round(c1[2] + (c2[2] - c1[2]) * t)
+  ];
+};
+
+const S = [
+  { a: 1, r: 3.4, g: 0, red: 0, t: '1. Original Plot', s: 'Solid dots lead to heavy overplotting' },
+  { a: .1, r: 5, g: 0, red: 0, t: '2. Transparency Slicer', s: 'Density is visible, but marks feel uncertain' },
+  { a: 1, r: 3.4, g: 1, red: 0, t: '3. Desaturation Slicer', s: 'Colors muted, but overlap remains' },
+  { a: .5, r: 3, g: 1, red: 0, t: '4. Gray Baseline', s: 'Neutral baseline eliminates visual noise' },
+  { a: .5, r: 3, g: 1, red: 1, t: '5. Focal Attention', s: EX.length + ' readings highlighted above safety limit' }
+];
+
+let tg = { ...S[0] };
+let cur = { ...S[0] };
+let step = 0;
+
+const tag = document.getElementById('tag');
+const lg = document.getElementById('lg');
+
+function setStep(i) {
+  step = i;
+  tg = { ...S[i] };
+  if (i === 1) tg.a = document.getElementById('op').value / 100;
+  if (i === 2) tg.g = 1 - (document.getElementById('sat').value / 100);
+  
+  tag.innerHTML = S[i].t + '<small>' + S[i].s + '</small>';
+  lg.innerHTML = (i >= 3)
+    ? '<span><i class="dot" style="background:var(--gray)"></i>Normal Readings</span><span><i class="dot" style="background:var(--red)"></i>Exceeding Safety Limit</span>'
+    : '<span><i class="dot" style="background:var(--a)"></i>Old Town</span><span><i class="dot" style="background:var(--b)"></i>Harbor District</span>';
+}
+
+setStep(0);
+
+document.getElementById('op').oninput = e => {
+  document.getElementById('opv').textContent = e.target.value + '%';
+  if (step === 1) tg.a = e.target.value / 100;
+};
+
+document.getElementById('sat').oninput = e => {
+  const satVal = e.target.value;
+  document.getElementById('satv').textContent = satVal + '% Saturation';
+  if (step === 2) tg.g = 1 - (satVal / 100);
+};
+
+function frame(ts) {
+  const k = 0.1;
+  ['a', 'r', 'g', 'red'].forEach(p => cur[p] += (tg[p] - cur[p]) * k);
+
+  ctx.clearRect(0, 0, 900, 620);
+
+  // Axes
+  ctx.strokeStyle = css('--line') || '#e5e5ea';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(60, 570); ctx.lineTo(880, 570);
+  ctx.moveTo(60, 40); ctx.lineTo(60, 570);
+  ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = css('--mute') || '#6e6e73';
+  ctx.font = '500 13px Inter, sans-serif';
+  ctx.fillText('Traffic Level', 430, 600);
+  ctx.fillText('PM2.5 Level', 10, 30);
+
+  const drawDots = (data, colorStr, alpha, radius) => {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = colorStr;
+    ctx.beginPath();
+    data.forEach(p => {
+      const x = X(p[0]), y = Y(p[1]);
+      ctx.moveTo(x + radius, y);
+      ctx.arc(x, y, radius, 0, 6.2832);
+    });
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  };
+
+  const colA = hexToRgb(css('--a') || '#0071e3');
+  const colB = hexToRgb(css('--b') || '#ff9f0a');
+  const colGray = hexToRgb(css('--gray') || '#8e8e93');
+
+  const mixedA = mixColors(colA, colGray, cur.g);
+  const mixedB = mixColors(colB, colGray, cur.g);
+
+  const colorStrA = `rgb(${mixedA[0]}, ${mixedA[1]}, ${mixedA[2]})`;
+  const colorStrB = `rgb(${mixedB[0]}, ${mixedB[1]}, ${mixedB[2]})`;
+
+  drawDots(OT, colorStrA, cur.a, cur.r);
+  drawDots(HB, colorStrB, cur.a, cur.r);
+
+  if (cur.red > 0.01) {
+    drawDots(EX, css('--red') || '#ff3b30', cur.red, 4);
+  }
+
+  // Safety Line
+  ctx.setLineDash([6, 6]);
+  ctx.strokeStyle = css('--ink') || '#1d1d1f';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(60, Y(LIM)); ctx.lineTo(880, Y(LIM));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = css('--ink') || '#1d1d1f';
+  ctx.font = '600 13px Inter, sans-serif';
+  ctx.fillText('Safety limit (50 µg/m³)', 730, Y(LIM) - 8);
+
+  requestAnimationFrame(frame);
+}
+
+requestAnimationFrame(frame);
+
+// Scroll Step Observer
+const steps = [...document.querySelectorAll('.step')];
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      steps.forEach(s => s.classList.remove('on'));
+      e.target.classList.add('on');
+      setStep(+e.target.dataset.s);
+    }
+  });
+}, { threshold: 0.6 });
+
+steps.forEach(s => io.observe(s));
+
+// Quiz Logic
+const Q = [
+  ['Does transparency solve overplotting without altering the visual message?', ['Yes, completely', 'No, it introduces perception of uncertainty or lower importance'], 1, 'False. While transparency reveals density, lowering opacity visually signals reduced certainty or lower importance.'],
+  ['What is a key drawback of desaturation?', ['It hides density', 'It mutes color without resolving physical point overlap'], 1, 'Desaturation changes visual weight, but fully opaque points still obscure each other.'],
+  ['Why is "Start with Gray" effective?', ['It creates a neutral baseline so intentional color draws pre-attentive focus', 'It makes the plot look dark'], 0, 'Gray eliminates visual noise, allowing selective color to immediately trigger pre-attentive attention.']
+];
+
+let qi = 0, sc = 0, done = false;
+
+function showQ() {
+  const q = Q[qi];
+  done = false;
+  document.getElementById('qq').textContent = q[0];
+  const o = document.getElementById('qo');
+  o.innerHTML = '';
+
+  q[1].forEach((t, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.textContent = t;
+    b.onclick = () => {
+      if (done) return;
+      done = true;
+      if (i === q[2]) sc++;
+      [...o.children].forEach((e, j) => {
+        if (j === q[2]) e.classList.add('right');
+        else if (j === i) e.classList.add('wrong');
+      });
+      document.getElementById('qt').textContent = q[3];
+      document.getElementById('qe').classList.add('show');
+      document.getElementById('qs').textContent = 'Score: ' + sc + ' / ' + (qi + 1);
+    };
+    o.appendChild(b);
+  });
+
+  document.getElementById('qe').classList.remove('show');
+  document.getElementById('qn').textContent = qi === Q.length - 1 ? 'Restart' : 'Next';
+}
+
+document.getElementById('qn').onclick = () => {
+  qi = (qi + 1) % Q.length;
+  if (!qi) { sc = 0; document.getElementById('qs').textContent = ''; }
+  showQ();
+};
+
+showQ();
+</script>
+
+</body>
+</html>
